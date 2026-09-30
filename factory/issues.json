@@ -2,10 +2,10 @@
   {
     "id": 1,
     "title": "Word frequency counter",
-    "prompt": "Write a Python function `word_freq(text)` that returns a dict mapping each lowercase word in `text` to how many times it appears. Ignore punctuation (commas, periods, exclamation marks and so on).",
+    "prompt": "Write a Python function `word_freq(text)` that returns a dict mapping each lowercase word in `text` to how many times it appears. Ignore punctuation (commas, periods, exclamation marks and so on), but KEEP an apostrophe that is inside a word: don't is ONE word and its key in the dict is \"don't\" (not \"dont\"). Apostrophes used as quotation marks around a word, as in 'hello', are not part of the word.",
     "test": "tests/test_word_freq.py",
     "output": "word_freq.py",
-    "status": "resolved"
+    "status": "pending"
   },
   {
     "id": 2,
@@ -22,5 +22,29 @@
     "test": "tests/test_binary_search.py",
     "output": "binary_search.py",
     "status": "resolved"
+  },
+  {
+    "id": 4,
+    "title": "Word frequency (approach hint)",
+    "prompt": "Write a Python function `word_freq(text)` that returns a dict mapping each lowercase word in `text` to how many times it appears. Ignore punctuation (commas, periods, exclamation marks and so on), but KEEP an apostrophe that is inside a word: don't is ONE word and its key in the dict is \"don't\" (not \"dont\"). Apostrophes used as quotation marks around a word, as in 'hello', are not part of the word. Approach: do NOT strip punctuation with re.sub. Instead lowercase the text and use re.findall to pull out the words directly, where a word is a run of word characters that may contain apostrophes between word characters. Then count the words.",
+    "test": "tests/test_word_freq.py",
+    "output": "word_freq_hint.py",
+    "status": "experiment"
+  },
+  {
+    "id": 5,
+    "title": "Record pack/unpack (24-byte format)",
+    "prompt": "Write two Python functions for a fixed-width binary record of exactly 24 bytes: an 8-byte unsigned integer key stored big-endian, followed by a 16-byte ASCII payload padded on the right with NUL bytes.\n`pack_record(key, payload)` takes an int key and a str payload and returns the 24 bytes. It raises ValueError if the key is not in the range 0 to 2**64-1, if the payload is longer than 16 characters, or if the payload contains a non-ASCII character or a NUL character.\n`unpack_record(data)` takes 24 bytes and returns a tuple (key, payload), where payload is a str with the NUL padding removed. It raises ValueError if data is not exactly 24 bytes.\nApproach: use the struct module with one fixed format string.",
+    "test": "tests/test_record.py",
+    "output": "record.py",
+    "status": "experiment"
+  },
+  {
+    "id": 6,
+    "title": "Record pack/unpack (struct format hint)",
+    "prompt": "Write two Python functions for a fixed-width binary record of exactly 24 bytes: an 8-byte unsigned integer key stored big-endian, followed by a 16-byte ASCII payload padded on the right with NUL bytes.\n`pack_record(key, payload)` takes an int key and a str payload and returns the 24 bytes. It raises ValueError if the key is not in the range 0 to 2**64-1, if the payload is longer than 16 characters, or if the payload contains a non-ASCII character or a NUL character.\n`unpack_record(data)` takes 24 bytes and returns a tuple (key, payload), where payload is a str with the NUL padding removed. It raises ValueError if data is not exactly 24 bytes.\nApproach: use the struct module with the format string '>Q16s' (a big-endian unsigned 64-bit integer followed by 16 bytes). A '16s' field takes a bytes object and pads it with NUL bytes by itself, so pass payload.encode('ascii'). To unpack, use the same format string, remove the padding with rstrip(b'\\x00') and decode with 'ascii'. Check the arguments first and raise ValueError; payloads of 0 to 16 characters are all valid.",
+    "test": "tests/test_record.py",
+    "output": "record_hint.py",
+    "status": "experiment"
   }
 ]
