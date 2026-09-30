@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1,
+    "title": "Factorial Calculator",
+    "prompt": "Write a Python script that computes the factorial of numbers from 1 to 10 and prints each result on a new line in the format 'n! = result'. Provide ONLY the executable Python code inside a markdown block.",
+    "status": "resolved",
+    "output": "outputs/task_1.py"
+  },
+  {
+    "id": 2,
+    "title": "Word Frequency Counter",
+    "prompt": "Write a Python script that counts the frequency of each word in the string text = 'The quick brown fox jumps over the lazy dog and the quick brown fox.' (case-insensitive, ignoring punctuation). Print the results sorted alphabetically. Provide ONLY the executable Python code inside a markdown block.",
+    "status": "resolved",
+    "output": "outputs/task_2.py"
+  },
+  {
+    "id": 3,
+    "title": "Linked List - Node and Append",
+    "prompt": "Write a single, self-contained Python script defining a Node class and a SinglyLinkedList class with an 'append' method and a simple print method. Instantiate the list, append numbers 10, 20, and 30, and print them. Provide ONLY the executable Python code inside a markdown block.",
+    "status": "resolved",
+    "output": "outputs/task_3a.py"
+  },
+  {
+    "id": 4,
+    "title": "Linked List - Prepend and Display",
+    "prompt": "Write a single, self-contained Python script defining a Node class and a SinglyLinkedList class with 'append', 'prepend', and 'display' methods. Instantiate the list, append 10 and 20, prepend 5, and print the final sequence as a comma-separated string using the display method. Provide ONLY the executable Python code inside a markdown block.",
+    "status": "resolved",
+    "output": "outputs/task_3b.py"
+  },
+  {
+    "id": 5,
+    "title": "Merge Sort Implementation",
+    "prompt": "Write a Python script that implements the Merge Sort algorithm from scratch without using built-in sort functions. Test it on the list [38, 27, 43, 3, 9, 82, 10] and print the sorted result. Provide ONLY the executable Python code inside a markdown block.",
+    "status": "resolved",
+    "output": "outputs/task_4.py"
+  }
+]
