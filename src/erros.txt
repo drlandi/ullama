@@ -1,1 +1,0 @@
-gcc -Wall -Wextra -Werror -O3 -I../../llama.cpp/include -I../../llama.cpp/ggml/include -c ullama.c -o ullama.o

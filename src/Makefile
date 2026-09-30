@@ -1,17 +1,21 @@
 NAME		= ullama
-SRC			= ullama.c
+SRC			= main.c engine.c chat.c gen.c
 OBJ			= $(SRC:.c=.o)
 CC			= gcc
 CFLAGS		= -Wall -Wextra -Werror -O3
-INCLUDES	= -I../../llama.cpp/include -I../../llama.cpp/ggml/include
-LIBS		= -L../../llama.cpp/build/bin -lllama -lpthread -lm
+LLAMA_DIR	?= $(HOME)/tools/llama.cpp
+INCLUDES	= -I$(LLAMA_DIR)/include -I$(LLAMA_DIR)/ggml/include
+LIBDIR		= $(LLAMA_DIR)/build/bin
+GGML		= $(patsubst $(LIBDIR)/lib%.so,-l%,$(wildcard $(LIBDIR)/libggml*.so))
+LIBS		= -L$(LIBDIR) -Wl,--disable-new-dtags,-rpath,$(LIBDIR) \
+			  -Wl,--no-as-needed -lllama $(GGML) -lpthread -lm
 
 all: $(NAME)
 
 $(NAME): $(OBJ)
 	$(CC) $(OBJ) -o $(NAME) $(LIBS)
 
-%.o: %.c
+%.o: %.c ullama.h
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:

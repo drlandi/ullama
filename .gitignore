@@ -1,3 +1,8 @@
-models/*.gguf
+models/
+*.gguf
+*.o
 src/ullama
-src/*.o
+logs/
+factory/outputs/
+__pycache__/
+*.log
