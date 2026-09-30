@@ -6,7 +6,7 @@ Everything was written as a learning project (42 São Paulo, Pop!_OS, 8 GB RAM, 
 
 - **`src/`** is the engine: load a GGUF model, keep a multi-turn chat, stream tokens.
 - **`factory/`** is the harness: give a small model a task, run a human-written judge on its code, retry, and count how often it passes. It also holds the benchmark script.
-- **`search/`** holds the function the harness produced and a human reviewed (see "Searching a record file").
+- **`search/`** holds the function the harness produced and a human reviewed (see "Searching a record file"), and `search/c/`, a human-written C version that uses `mmap` (see "C version with mmap").
 
 ## Engine
 
@@ -140,6 +140,39 @@ The function from the last row of the previous table (`search/search_file.py`) w
 - The linear scan is a rough baseline (2 queries at 100 million: one absent key that must read the whole file, and one present key that stops earlier). Treat it as an order of magnitude.
 - The measuring tool itself can disturb the measurement: the first version of the benchmark read the answer pages while building its oracle, which warmed exactly the pages the "cold" pass needed. Dropping the cache after building the queries fixed that.
 
+## C version with mmap
+
+`search/c/` is a human-written C version (not produced by the factory), written to the 42 Norm and checked with `norminette` and `-Wall -Wextra -Werror`. It exists to answer one question: how much of the roughly 60 µs Python lookup is Python?
+
+It does not use its own oracle. `factory/bench_search.py --export-queries` writes the same 2,000 queries and their correct answers that the Python benchmark uses, and the C program verifies every answer before reporting a time (a deliberately wrong search aborts with the same mismatch the Python benchmark reports). There are two modes: `percall` opens, maps, searches, unmaps and closes the file on every lookup, like the Python function; `mapped` maps the file once and times only the search. It also reports minor and major page faults per query. Setting `MSEARCH_RANDOM=1` applies `madvise(MADV_RANDOM)` to the mapping, which turns kernel readahead off.
+
+```bash
+cd search/c && make re && cd ../..        # use make re; touching files can leave stale objects
+python3 factory/bench_search.py search/search_file.py data/records_100M.bin --export-queries data/q_100M.bin
+search/c/msearch_bench data/records_100M.bin data/q_100M.bin percall     # or: mapped
+MSEARCH_RANDOM=1 search/c/msearch_bench data/records_100M.bin data/q_100M.bin mapped
+```
+
+Results on the 100-million-record file (2.4 GB), 2,000 queries, same machine. The Python row is the benchmark from above; the C rows are from later runs, and warm figures are the range over repeated runs.
+
+| Variant | Cold median | Cold p99 | Cold major faults per query | Warm median | Warm p99 | Warm minor faults per query |
+|---|---|---|---|---|---|---|
+| Python, per call | 1,697 µs | 3,153 µs | not counted | 58.5 µs | 88.1 µs | not counted |
+| C `mmap`, per call | 688 µs | 11,214 µs | 1.61 | 59.8 to 63.3 µs | 92 to 150 µs | 15.1 |
+| C `mmap`, per call, `MADV_RANDOM` | 1,611 µs | 2,757 µs | 8.30 | 37.1 to 40.2 µs | 62 to 85 µs | 15.1 |
+| C `mmap`, mapped once | 808 µs | 11,348 µs | 1.61 | 1.4 to 1.8 µs | 7 to 8 µs | 0 |
+| C `mmap`, mapped once, `MADV_RANDOM` | 1,654 µs | 2,851 µs | 8.30 | 1.2 µs | 7.0 µs | 0 |
+
+What the measurements show:
+
+- **The language is not where the time goes.** A C lookup that opens and maps the file every time costs about the same as the Python one (about 60 µs against about 59 µs). The same C search on a file that is already mapped takes 1.2 to 1.8 µs, which is about 30 to 45 times less. Keeping the file open or mapped matters far more than the choice of language.
+- **Per-call mapping costs about 15 minor page faults per lookup;** a file mapped once costs none.
+- **Kernel readahead causes the cold tail in the `mmap` version.** With the default setting the C cold p99 is about 11 ms (11.2 to 11.6 ms over four runs for per-call, 10.5 to 11.9 ms for mapped). With `MADV_RANDOM` it drops to about 2.8 ms and the maximum from 18 to 25 ms to about 4 ms, at the price of a doubled median (about 0.8 ms to 1.65 ms) because each probe becomes its own small random read (8.3 major faults per query instead of 1.6). With readahead off the C cold profile is close to the Python one.
+- **Cold latency is roughly eight disk reads.** 8.3 major faults per query at about 0.2 ms each is about 1.65 ms.
+- **`MADV_RANDOM` also lowered the warm per-call latency** from about 60 µs to about 38 µs (four runs, three of them interleaved with default-setting runs), with the same number of faults per lookup. The reason was not established.
+
+What was not established: how the roughly 60 µs of the per-call version splits between page faults and the `open`, `mmap`, `munmap` and `close` calls; why `MADV_RANDOM` lowers the warm per-call time; and whether these effects are specific to this machine and disk (the disk type was not checked). One early C per-call run measured 82 µs warm and did not repeat in six later runs, so it is not used. The timer (`clock_gettime`) costs roughly 20 to 30 ns per lookup, which is small against microseconds but visible against the 1.2 to 1.8 µs mapped search.
+
 ## What the numbers support
 
 - **How the task is specified mattered most.** Pooling the two no-hint word-frequency benchmarks, a single attempt passed about 3.5% of the time (2/57); with an approach hint it passed about 32% (7/22), which is very unlikely to be chance (Fisher's exact test, p about 0.002). The format-string hint on the record task moved runs from 0/10 to 5/10 (p about 0.03), and the structural hint on the search task moved them from 1/10 to 10/10 (p about 0.0001).
@@ -152,14 +185,14 @@ The function from the last row of the previous table (`search/search_file.py`) w
 - **The hints are close to the solution.** A human describing the approach in that much detail is doing much of the work. These results say a small model can type a well-described function; they do not say it can design one.
 - **Few tasks, two models, one machine.** Nothing here should be generalised beyond that.
 - **The 100-million-record file is the largest tested.** A billion records (24 GB) does not fit on the free disk space of the machine used.
-- **The search function is Python.** A C version using `mmap` has not been written or measured, and no claim is made about how it would compare.
+- **The factory-built search function is Python.** The C version is human-written, and the factory was not asked to produce it. Python with the file kept open between lookups was not measured, so the Python-versus-C comparison covers only the per-call design.
 - **`posix_fadvise` is advisory.** The cold pass is much slower than the warm pass, as expected, but the strongest way to guarantee a cold cache (`echo 3 > /proc/sys/vm/drop_caches`) was not used.
 - **The engine was tested on Qwen2.5 models only.** Other chat templates are handled by llama.cpp but were not tried.
 - **An early comparison with Ollama** (about 16 to 17 tok/s here against about 11) came from a handful of single runs with different settings (threads, context size, sampler). It is not evidence that this wrapper is faster. A matched comparison with `llama-bench` has not been done.
 
 ## Roadmap
 
-1. A C version of the search with `mmap`, checked by the same oracle and timed the same way.
+1. Split the per-call cost of the C version (page faults against `open`, `mmap`, `munmap`, `close`) and measure Python with the file kept open.
 2. A SQLite baseline on the same data.
 3. The billion-record run on a drive with enough space.
 4. A matched benchmark of the engine against Ollama using `llama-bench`.

@@ -2,6 +2,7 @@ models/
 *.gguf
 *.o
 src/ullama
+search/c/msearch_bench
 logs/
 factory/outputs/
 __pycache__/

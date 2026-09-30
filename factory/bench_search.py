@@ -11,6 +11,7 @@ stored key is larger than that, so it cannot be present.
 
 Usage:
   python3 bench_search.py SOLUTION.py DATAFILE [--queries 2000] [--seed 1] [--baseline 3] [--log]
+  python3 bench_search.py SOLUTION.py DATAFILE --export-queries q.bin    (same queries for the C benchmark)
 
 Make a data file with:  python3 tests/recordlib.py data/records_1M.bin 1000000
 The first pass is made cold by asking the kernel (posix_fadvise DONTNEED) to drop this file from the page
@@ -97,6 +98,7 @@ def main():
     ap.add_argument("--queries", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--baseline", type=int, default=None, help="linear-scan queries to time (default 3 if the file has <= 20M records)")
+    ap.add_argument("--export-queries", metavar="FILE", help="write the queries and their correct answers to FILE (for the C benchmark) and stop")
     ap.add_argument("--no-drop", action="store_true", help="do not drop the file from the page cache before the first pass")
     ap.add_argument("--log", action="store_true", help="append the result to factory/results.jsonl")
     args = ap.parse_args()
@@ -107,6 +109,13 @@ def main():
     n = size // RECORD
     fn = load_function(args.solution)
     queries = make_queries(args.datafile, n, args.queries, args.seed)
+
+    if args.export_queries:
+        with open(args.export_queries, "wb") as out:
+            for key, expected in queries:
+                out.write(struct.pack("<Qq", key, expected))      # 16 bytes: uint64 key, int64 expected index
+        print("wrote %d queries to %s" % (len(queries), args.export_queries))
+        return
 
     print("file: %s  (%d records, %.2f GB)   queries: %d (half present, half absent)" % (args.datafile, n, size / 1e9, len(queries)))
     # Building the queries read pages of the file (that is how the oracle knows the answers).
