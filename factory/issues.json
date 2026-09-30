@@ -46,5 +46,27 @@
     "test": "tests/test_record.py",
     "output": "record_hint.py",
     "status": "experiment"
+  },
+  {
+    "id": 7,
+    "title": "Search a sorted record file (Python)",
+    "prompt": "Write a Python function `search_file(path, key)`. The file at `path` holds fixed-width binary records, 24 bytes each, sorted by key in ascending order with no duplicate keys. The first 8 bytes of each record are the key as a big-endian unsigned integer; the remaining 16 bytes are the payload, which you can ignore. `search_file` returns the index of the record whose key equals `key` (the first record has index 0), or -1 if there is none. An empty file has no records.\nThe file can be much larger than memory, so never read all of it. Approach: open the file in binary mode; compute the number of records with os.path.getsize(path) // 24; do an iterative binary search over the record indices; to read the key of record i, call f.seek(i * 24), then f.read(8), then int.from_bytes(data, 'big'). Do not use the mmap module.",
+    "test": "tests/test_search_file.py",
+    "support": [
+      "tests/recordlib.py"
+    ],
+    "output": "search_file.py",
+    "status": "experiment"
+  },
+  {
+    "id": 8,
+    "title": "Search a record file (structural hint)",
+    "prompt": "Write a Python function `search_file(path, key)`. The file at `path` holds fixed-width binary records, 24 bytes each, sorted by key in ascending order with no duplicate keys. The first 8 bytes of each record are the key as a big-endian unsigned integer; the remaining 16 bytes are the payload, which you can ignore. `search_file` returns the index of the record whose key equals `key` (the first record has index 0), or -1 if there is none. An empty file has no records.\nThe file can be much larger than memory, so never read all of it. Approach: open the file in binary mode; compute the number of records with os.path.getsize(path) // 24; do an iterative binary search over the record indices; to read the key of record i, call f.seek(i * 24), then f.read(8), then int.from_bytes(data, 'big'). Do not use the mmap module.\nStructure: start the code with `import os`. Open the file exactly once, before the loop, using `with open(path, 'rb') as f:`, and put the whole binary search loop and all return statements inside that with block.",
+    "test": "tests/test_search_file.py",
+    "support": [
+      "tests/recordlib.py"
+    ],
+    "output": "search_file_hint.py",
+    "status": "experiment"
   }
 ]

@@ -13,6 +13,7 @@ The loop, per task in issues.json:
 Usage:
   python3 factory.py                          run every "pending" task
   python3 factory.py --strategy fresh         same, but with fresh retries
+  python3 factory.py --only 7                 run task 7 once (any status) and keep its code
   python3 factory.py --bench 10 --only 1      measure task 1 over 10 runs
   python3 factory.py --judge FILE --only 5    run task 5's judge on a saved file
   python3 factory.py --reset                  set every task to "pending"
@@ -91,6 +92,8 @@ def run_judge(issue, code):
         with open(os.path.join(work, "solution.py"), "w") as f:
             f.write(code + "\n")
         shutil.copy(os.path.join(HERE, issue["test"]), os.path.join(work, "check.py"))
+        for extra in issue.get("support", []):      # helper files the judge needs (human-written)
+            shutil.copy(os.path.join(HERE, extra), os.path.join(work, os.path.basename(extra)))
         try:
             r = subprocess.run(
                 [sys.executable, "check.py"],
@@ -161,7 +164,17 @@ def failure_label(message):
     line = message.strip().splitlines()[-1] if message.strip() else "no message"
     prefix = "AssertionError: "
     if line.startswith(prefix):
-        return line[len(prefix):].split(": ")[0]
+        rest = line[len(prefix):]
+        label = rest.split(": ")[0]
+        if " returned " in rest:
+            label += " [wrong answer]"
+        elif " read " in rest and "bytes" in rest:
+            label += " [too many bytes read]"
+        elif " opened the file " in rest:
+            label += " [opened more than once]"
+        elif " left the file open" in rest:
+            label += " [file left open]"
+        return label
     return line[:90]
 
 
@@ -230,22 +243,29 @@ def main():
         bench(issues, args.bench, args.strategy, args.only)
         return
 
-    todo = [i for i in issues if i["status"] == "pending"]
+    if args.only is not None:         # run exactly this task once; its status in issues.json is left alone
+        todo = [i for i in issues if i["id"] == args.only]
+    else:
+        todo = [i for i in issues if i["status"] == "pending"]
     if not todo:
-        print("Nothing pending. Use --reset to run everything again.")
+        print("Nothing to run. Use --reset to make every task pending, or --only ID.")
         return
+    outcome = {}
     for issue in todo:
         print("\n== #%s %s ==" % (issue["id"], issue["title"]))
         start = time.time()
-        issue["status"], attempts = work_on(issue, args.strategy)
+        status, attempts = work_on(issue, args.strategy)
+        outcome[issue["id"]] = status
         log({"kind": "run", "id": issue["id"], "title": issue["title"],
-             "status": issue["status"], "attempts": attempts,
+             "status": status, "attempts": attempts,
              "strategy": args.strategy, "seconds": round(time.time() - start, 1)})
-        with open(ISSUES, "w") as f:      # save after every task
-            json.dump(issues, f, indent=2)
+        if args.only is None:
+            issue["status"] = status
+            with open(ISSUES, "w") as f:      # save after every task
+                json.dump(issues, f, indent=2)
     print("\n== Summary ==")
     for i in todo:
-        print("  #%s %-28s %s" % (i["id"], i["title"], i["status"]))
+        print("  #%s %-28s %s" % (i["id"], i["title"], outcome[i["id"]]))
 
 
 if __name__ == "__main__":
