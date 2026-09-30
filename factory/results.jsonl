@@ -1,0 +1,3 @@
+{"time": "2026-09-29 21:53:56", "id": 1, "title": "Word frequency counter", "status": "resolved", "attempts": 2, "seconds": 16.2}
+{"time": "2026-09-29 21:54:04", "id": 2, "title": "Password strength check", "status": "resolved", "attempts": 1, "seconds": 8.1}
+{"time": "2026-09-29 21:54:12", "id": 3, "title": "Binary search (in memory)", "status": "resolved", "attempts": 1, "seconds": 8.1}
